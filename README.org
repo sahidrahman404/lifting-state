@@ -1,0 +1,118 @@
+#+title: Lifting State
+
+* How to share state between two sibling components?
+"lift the state" which basically amounts to finding the lowest
+common parent shared between the two components and placing the state management
+there, and then passing the state and a mechanism for updating that state down
+into the components that need it.
+* Example
+** Our Initial App
+#+begin_src tsx
+function Name({
+  name,
+  onNameChange,
+}: {
+  name: string;
+  onNameChange: ChangeEventHandler<HTMLInputElement>;
+}) {
+  return (
+    <div>
+      <label htmlFor="name">Name: </label>
+      <input id="name" value={name} onChange={onNameChange} />
+    </div>
+  );
+}
+
+// 🐨 accept `animal` and `onAnimalChange` props to this component
+function FavoriteAnimal() {
+  // 💣 delete this, it's now managed by the App
+  const [animal, setAnimal] = useState("");
+  return (
+    <div>
+      <label htmlFor="animal">Favorite Animal: </label>
+      <input
+        id="animal"
+        value={animal}
+        onChange={(event) => setAnimal(event.target.value)}
+      />
+    </div>
+  );
+}
+// 🐨 uncomment this
+// function Display({name, animal}) {
+//   return <div>{`Hey ${name}, your favorite animal is: ${animal}!`}</div>
+// }
+
+// 💣 remove this component in favor of the new one
+function Display({ name }: { name: string }) {
+  return <div>{`Hey ${name}, you favorite animal`}</div>;
+}
+
+function App() {
+  // 🐨 add a useState for the animal
+  const [name, setName] = useState("");
+  return (
+    <form>
+      <Name name={name} onNameChange={(event) => setName(event.target.value)} />
+      {/* 🐨 pass the animal and onAnimalChange prop here (similar to the Name component above) */}
+      <FavoriteAnimal />
+      {/* 🐨 pass the animal prop here */}
+      <Display name={name} />
+    </form>
+  );
+}
+#+end_src
+Suppose we have a new feature request for the ~Display~ component. We want to display the ~animal~ the user selects. But that state is managed in a "sibling" component, so we have to move that management to the least common parent (~App~) and then pass it down.
+** Lifting the state
+#+begin_src tsx
+function Name({
+  name,
+  onNameChange,
+}: {
+  name: string;
+  onNameChange: ChangeEventHandler<HTMLInputElement>;
+}) {
+  return (
+    <div>
+      <label htmlFor="name">Name: </label>
+      <input id="name" value={name} onChange={onNameChange} />
+    </div>
+  );
+}
+
+function FavoriteAnimal({
+  animal,
+  onAnimalChange,
+}: {
+  animal: string;
+  onAnimalChange: ChangeEventHandler<HTMLInputElement>;
+}) {
+  return (
+    <div>
+      <label htmlFor="animal">Favorite Animal: </label>
+      <input id="animal" value={animal} onChange={onAnimalChange} />
+    </div>
+  );
+}
+function Display({ name, animal }: { name: string; animal: string }) {
+  return <div>{`Hey ${name}, your favorite animal is: ${animal}!`}</div>;
+}
+
+function App() {
+  const [name, setName] = useState("");
+  const [animal, setAnimal] = useState("");
+
+  return (
+    <form>
+      <Name name={name} onNameChange={(event) => setName(event.target.value)} />
+      <FavoriteAnimal
+        animal={animal}
+        onAnimalChange={(e) => {
+          setAnimal(() => e.target.value);
+        }}
+      />
+      <Display name={name} animal={animal} />
+    </form>
+  );
+}
+#+end_src
